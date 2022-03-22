@@ -134,6 +134,11 @@
 #define ULOG_USING_ISR_LOG
 #define ULOG_ASSERT_ENABLE
 #define ULOG_LINE_BUF_SIZE 128
+#define ULOG_USING_ASYNC_OUTPUT
+#define ULOG_ASYNC_OUTPUT_BUF_SIZE 2048
+#define ULOG_ASYNC_OUTPUT_BY_THREAD
+#define ULOG_ASYNC_OUTPUT_THREAD_STACK 1024
+#define ULOG_ASYNC_OUTPUT_THREAD_PRIORITY 30
 
 /* log format */
 
@@ -219,7 +224,6 @@
 /* end of system packages */
 
 /* peripheral libraries and drivers */
-
 
 #define PKG_USING_NRF24L01
 #define PKG_USING_NRF24L01_LATEST_VERSION

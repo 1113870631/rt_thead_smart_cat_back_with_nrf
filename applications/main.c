@@ -22,7 +22,6 @@
 
 int main(void)
 {
-
      thead_creat();
      return RT_EOK;
 }

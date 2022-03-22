@@ -239,13 +239,26 @@ static void total_con_dir_entry(void *parameter){
  *
  *
  * */
-#define ENCODER_PIN  85
+
+rt_tick_t   tick_arr[2]={0};
+double speed=0;
+#define ENCODER_PIN  54  //F5 85    D6 54
+
+rt_sem_t speed_sem;
 void encoder_irq(void *args){
+    //得到时间 释放信号量
+    tick_arr[encoder_num]=rt_tick_get();
+    //LOG_I("LOG_I encoder_num %d    tick:%d",encoder_num,tick_arr[encoder_num]);
     encoder_num++;
-    if(encoder_num==54)
-        encoder_num=0;
-    LOG_I("LOG_I encoder_num %d:",encoder_num);
+    if(encoder_num==2){
+         encoder_num=0;
+         rt_sem_release(speed_sem);
+    }
+
 }
+
+rt_uint32_t level;
+
 static void encoder1( void *parameter){
 //引脚初识化
 
@@ -253,9 +266,37 @@ static void encoder1( void *parameter){
     rt_pin_attach_irq(ENCODER_PIN, PIN_IRQ_MODE_FALLING, encoder_irq, RT_NULL);
     /* 使 能 中 断 */
     rt_pin_irq_enable(ENCODER_PIN, PIN_IRQ_ENABLE);
+
+    /* 创 建 一 个 动 态 信 号 量， 初 始 值 是 0 */
+    speed_sem = rt_sem_create("speed_sem", 0, RT_IPC_FLAG_FIFO);
+    if (speed_sem == RT_NULL) {
+        rt_kprintf("create speed_sem semaphore failed.\n");
+    }
+    else
+    {
+        rt_kprintf("create done. speed_sem semaphore value = 0.\n");
+    }
+
     while(1)
     {
-        rt_thread_mdelay(10);
+        rt_err_t result;
+        result = rt_sem_take(speed_sem, RT_WAITING_FOREVER);
+        if (result != RT_EOK) {
+        rt_kprintf(" take a speed_sem semaphore, failed.\n");
+        rt_sem_delete(speed_sem);
+        return; }
+        else
+        {
+            //rt_kprintf("sem ok\n");
+           //level = rt_hw_interrupt_disable();
+           speed=(6.66*1000/(tick_arr[1]-tick_arr[0]))/360;
+           int tmp=speed*1000;
+           rt_kprintf("%d\n",tmp);
+           //level = rt_hw_interrupt_enable();
+           //LOG_I("speed");
+
+        }
+
     }
 }
 
