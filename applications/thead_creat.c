@@ -2,8 +2,12 @@
 
 #include <rtdevice.h>
 #include <thead_creat.h>
+
 #include <motrol.h>
 #include <motrol_dir.h>
+#include "pid.h"
+#include "hard_encoder.h"
+
 #define LOG_TAG "thead_creat.c"
 #define LOG_LVL LOG_LVL_DBG
 #include <ulog.h>
@@ -35,12 +39,10 @@ static void uart_re_entry(void *parameter){
 
 /*接收回调函数 接收4个字节发送信号*/
     rt_err_t uart_input(rt_device_t dev, rt_size_t size) {
-        rt_kprintf("size is %d\n",size);
         if(size==4)
         {
             rt_sem_release(rx_sem);
         };
-        //rt_kprintf("%d\n",size);
         return RT_EOK;
     }
     /*找到uart2*/
@@ -87,7 +89,6 @@ static void uart_re_entry(void *parameter){
                       /*将四个字节转移到命令缓冲区*/
                  for(i=0;i<4;i++){
                  tmp[i]=buffer[i];
-                 //rt_kprintf("%d",i);
                  }
              }
              else{
@@ -97,15 +98,6 @@ static void uart_re_entry(void *parameter){
 
              /*接收完一个命令复位i*/
              if(i==4){
-                 int j=0;
-                 //打印命令
-                 rt_kprintf("命令为：\n");
-                                  for(j=0;j<4;j++)
-                                  {
-                                      rt_kprintf("%c",tmp[j]);
-                                  };
-                                  rt_kprintf("\n");
-
                  /*根据命令类型发送不同的信号量给控制进程*/
                  if(tmp==command_move_pool){
                      rt_sem_release(move_sem);
@@ -140,10 +132,10 @@ static void total_con_move_entry(void *parameter){
       /*使能pwm1 pwm2*/
       rt_pwm_enable((struct rt_device_pwm *)pwm1_dev, 1);
       rt_pwm_enable((struct rt_device_pwm *)pwm2_dev, 1);
-    while(1)
-    {
-         /*等待信号量*/
-         ret = rt_sem_take(move_sem, RT_WAITING_FOREVER);
+              while(1)
+              {
+                 /*等待信号量*/
+                 ret = rt_sem_take(move_sem, RT_WAITING_FOREVER);
                 if (ret != RT_EOK) {
                 rt_kprintf("take a dynamic move semaphore, failed.\n");
                 rt_sem_delete(move_sem);
@@ -152,7 +144,6 @@ static void total_con_move_entry(void *parameter){
                 {
                     if(command_move_pool[1]=='1'){
                         //前进命令
-                        rt_kprintf("set forhead\n");
                         //解析速度
                          int tmp1=0,tmp2=0,speed_tmp3=0;
                          tmp1=command_move_pool[2]-'0';
@@ -162,12 +153,10 @@ static void total_con_move_entry(void *parameter){
                         motrol_2_con(MOTROL_FORHEAD, speed_tmp3,pwm2_dev);
                     };
                     if(command_move_pool[1]=='0'){
-                        rt_kprintf("set stop\n");
                         motrol_1_con(MOTROL_STOP, 0,pwm1_dev);
                         motrol_2_con(MOTROL_STOP, 0,pwm2_dev);
                     };
                     if(command_move_pool[1]=='2'){
-                        rt_kprintf("set back\n");
                         int tmp1=0,tmp2=0,speed_tmp3=0;
                         tmp1=command_move_pool[2]-'0';
                         tmp2=command_move_pool[3]-'0';
@@ -175,8 +164,9 @@ static void total_con_move_entry(void *parameter){
                          motrol_1_con(MOTROL_BACKWORD, speed_tmp3,pwm1_dev);
                          motrol_2_con(MOTROL_BACKWORD, speed_tmp3,pwm2_dev);
                     };
-                }
-    }
+                  }
+                rt_thread_mdelay(3);
+               }
 }
 /*
  *[1] [pwm1] [pwm1] [speed]
@@ -188,9 +178,9 @@ static void total_con_move_entry(void *parameter){
     线程3 入口  解析dir命令缓冲区命令执行命令*/
 static void total_con_dir_entry(void *parameter){
     rt_err_t ret;
-    int per,per_per=50;
-
-
+    // per 收到的角度百分比  per_per上一次的角度百分比
+    double per,per_per=50;
+    double dir_err_num=0;
     rt_device_t  pwm_dev;
     /*打开pwm3*/
     pwm_dev = rt_device_find("pwm3");
@@ -213,9 +203,7 @@ static void total_con_dir_entry(void *parameter){
                        shi=command_dir_pool[1]-'0';
                        ge =command_dir_pool[2]-'0';
 
-                     per=(shi*10+ge);
-                     /*设置角度
-                      * per 30~50~70*/
+                     per=(shi*10+ge)+dir_err_num;
                      if(per==per_per){
 
                      }
@@ -223,11 +211,6 @@ static void total_con_dir_entry(void *parameter){
                          ch_dir(per, 100, pwm_dev);
                          per_per=per;
                      }
-
-
-                     rt_kprintf(" thead get shi: %d\n",shi);
-                     rt_kprintf("thead get ge: %d\n",ge);
-                     rt_kprintf("per: %d\n",per);
                      rt_thread_mdelay(3);
                    }
        }
@@ -247,10 +230,12 @@ double speed=0;
 rt_sem_t speed_sem;
 void encoder_irq(void *args){
     //得到时间 释放信号量
-    tick_arr[encoder_num]=rt_tick_get();
-    //LOG_I("LOG_I encoder_num %d    tick:%d",encoder_num,tick_arr[encoder_num]);
+    if(encoder_num==0){
+        tick_arr[0]=rt_tick_get();
+    }
     encoder_num++;
-    if(encoder_num==2){
+    if(encoder_num==10){
+         tick_arr[1]=rt_tick_get();
          encoder_num=0;
          rt_sem_release(speed_sem);
     }
@@ -264,11 +249,12 @@ static void encoder1( void *parameter){
 
     rt_pin_mode(ENCODER_PIN, PIN_MODE_INPUT);
     rt_pin_attach_irq(ENCODER_PIN, PIN_IRQ_MODE_FALLING, encoder_irq, RT_NULL);
-    /* 使 能 中 断 */
-    rt_pin_irq_enable(ENCODER_PIN, PIN_IRQ_ENABLE);
 
     /* 创 建 一 个 动 态 信 号 量， 初 始 值 是 0 */
     speed_sem = rt_sem_create("speed_sem", 0, RT_IPC_FLAG_FIFO);
+    /* 使 能 中 断 */
+    rt_pin_irq_enable(ENCODER_PIN, PIN_IRQ_ENABLE);
+
     if (speed_sem == RT_NULL) {
         rt_kprintf("create speed_sem semaphore failed.\n");
     }
@@ -287,18 +273,27 @@ static void encoder1( void *parameter){
         return; }
         else
         {
-            //rt_kprintf("sem ok\n");
-           //level = rt_hw_interrupt_disable();
-           speed=(6.66*1000/(tick_arr[1]-tick_arr[0]))/360;
-           int tmp=speed*1000;
+           speed=(6.66*1000/(tick_arr[1]-tick_arr[0]))/36;
+           int tmp=speed;
+           if(tmp<20)
            rt_kprintf("%d\n",tmp);
-           //level = rt_hw_interrupt_enable();
-           //LOG_I("speed");
-
         }
 
     }
 }
+/*线程5 编码器  入口*/
+static void hard_encoder( void *parameter){
+
+    Encoder_Init_TIM2();
+    Encoder_Init_TIM3();
+    int count;
+  while(1){
+      Encoder_Get_inf(0,&count);
+      rt_kprintf("%d\n",count);
+      rt_thread_mdelay(10);
+  }
+
+};
 
 static int thead1(void){
     rt_thread_t tid1;
@@ -319,7 +314,7 @@ static int thead2(void){
     tid2 = rt_thread_create("con_move",
     total_con_move_entry, RT_NULL,
     THREAD_STACK_SIZE,
-    25, THREAD_TIMESLICE);
+    26, THREAD_TIMESLICE);
     /* 如 果 获 得 线 程 控 制 块， 启 动 这 个 线 程 */
     if (tid2 != RT_NULL)
     rt_thread_startup(tid2);\
@@ -355,6 +350,21 @@ static int thead4(void){
     return 0;
 }
 
+static int thead5(void){
+    rt_thread_t tid5;
+    /* 创 建 线 程 5， 名 称 是 tid5， 入 口 是 hard_encoder*/
+    tid5 = rt_thread_create("hard_encoder",
+    hard_encoder, RT_NULL,
+    THREAD_STACK_SIZE,
+    26, THREAD_TIMESLICE);
+    /* 如 果 获 得 线 程 控 制 块， 启 动 这 个 线 程 */
+    if (tid5 != RT_NULL)
+    rt_thread_startup(tid5);\
+    rt_kprintf("thead5 ok\n");
+    return 0;
+}
+
+
 
 int thead_creat(void){
     thead1();//启动线程1 uart 命令接收与转移到缓冲区
@@ -362,6 +372,6 @@ int thead_creat(void){
     thead2();//启动线程2 move 缓冲区 命令解析与执行
     thead3();//启动线程3 dir  缓冲区命令解析与执行
     thead4();//启动线程4encoder1
-
+    thead5();//启动线程5 硬件编码器
     return 0;
 };

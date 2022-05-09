@@ -53,9 +53,7 @@ static void rx_ind(nrf24_t nrf24, uint8_t *data, uint8_t len, int pipe)
 
     rt_sem_release(move_sem);
     rt_sem_release(dir_sem);
-    rt_kprintf("(p%d): ", pipe);
-    rt_kprintf((char *)data);
-    rt_kprintf("\n");
+
 }
 
 static void tx_done(nrf24_t nrf24, int pipe)
@@ -86,8 +84,6 @@ static void thread_entry(void *param)
         rt_kprintf("[nrf24/demo] running.");
     }
 
-    //nrf24_send_data(nrf24, "Hi\n", 3, NRF24_DEFAULT_PIPE);
-
     while (1)
     {
         nrf24_run(nrf24);
@@ -104,7 +100,7 @@ static int nrf24l01_sample_init(void)
     rt_thread_delay(5000);
     rt_hw_spi_device_attach("spi2",NRF24_DEMO_SPI_DEV_NAME,GPIOG, GPIO_PIN_7);
     rt_kprintf("delay ok \n");
-    thread = rt_thread_create("nrfDemo", thread_entry, RT_NULL, 1024, 26, 20);
+    thread = rt_thread_create("nrfDemo", thread_entry, RT_NULL, 1024, 28, 20);
     rt_thread_startup(thread);
 
     return RT_EOK;

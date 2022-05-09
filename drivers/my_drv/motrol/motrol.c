@@ -60,7 +60,7 @@ int motrol_1_con(int dir,int speed,void* device){
     int goal;
     goal=period*speed/100;
     rt_pwm_set(device,1,period, goal);
-    rt_kprintf("speed1 %d\n",speed);
+    //rt_kprintf("speed1 %d\n",speed);
 
        return 0;
 };
@@ -87,7 +87,7 @@ int motrol_2_con(int dir,int speed,void* device){
     int goal;
     goal=period*speed/100;
     rt_pwm_set(device,1,period, goal);
-    rt_kprintf("speed2 %d\n",speed);
+    //rt_kprintf("speed2 %d\n",speed);
     return 0;
 };
 

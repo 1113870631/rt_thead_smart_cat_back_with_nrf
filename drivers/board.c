@@ -96,6 +96,45 @@ RT_WEAK void rt_hw_board_init()
                       GPIO_InitStruct.Pull = GPIO_NOPULL;
                       HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
+                     // TIM2 encoder
+
+                       /* USER CODE BEGIN TIM2_MspInit 0 */
+
+                       /* USER CODE END TIM2_MspInit 0 */
+                         /* Peripheral clock enable */
+                         __HAL_RCC_TIM2_CLK_ENABLE();
+
+                         __HAL_RCC_GPIOA_CLK_ENABLE();
+                         /**TIM2 GPIO Configuration
+                         PA0-WKUP     ------> TIM2_CH1
+                         PA1     ------> TIM2_CH2
+                         */
+                         GPIO_InitStruct.Pin = GPIO_PIN_0|GPIO_PIN_1;
+                         GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+                         GPIO_InitStruct.Pull = GPIO_NOPULL;
+                         HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+
+                       /* USER CODE BEGIN TIM2_MspInit 1 */
+
+                       /* USER CODE END TIM2_MspInit 1 */
+
+
+                         __HAL_RCC_TIM3_CLK_ENABLE();
+
+                         __HAL_RCC_GPIOA_CLK_ENABLE();
+                         /**TIM3 GPIO Configuration
+                         PA6     ------> TIM3_CH1
+                         PA7     ------> TIM3_CH2
+                         */
+                         GPIO_InitStruct.Pin = GPIO_PIN_6|GPIO_PIN_7;
+                         GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+                         GPIO_InitStruct.Pull = GPIO_NOPULL;
+                         HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+
 
 
 }
+
+
+
+
