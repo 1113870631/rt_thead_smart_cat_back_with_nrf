@@ -24,9 +24,13 @@
  */
 #ifndef DRIVERS_MY_DRV_MOTROL_MOTROL_H_
 #define DRIVERS_MY_DRV_MOTROL_MOTROL_H_
+
 #define MOTROL_FORHEAD 1
 #define MOTROL_BACKWORD 2
 #define MOTROL_STOP 0
+
+ #define MOTRO_R 1
+ #define MOTRO_L 2
 
 /* MOTROL_FORHEAD  前进
  * MOTROL_BACKWORD 回退
@@ -34,9 +38,6 @@
  * speed 0~100
  * */
 void set_motrol_pin(void);
-int motrol_1_con(int dir,int speed,void* device);
-int motrol_2_con(int dir,int speed,void* device);
-
-
+int motrol_con(int pos,float dir,float speed,void* device);
 
 #endif /* DRIVERS_MY_DRV_MOTROL_MOTROL_H_ */

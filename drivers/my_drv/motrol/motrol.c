@@ -10,6 +10,7 @@
 #include "motrol.h"
 #include <rtdevice.h>
 #include <drv_common.h>
+extern int MAX_SPEED;
 /*获取控制引脚编号*/
 #define IN1_PIN GET_PIN(B,1)
 #define IN2_PIN GET_PIN(B,2)
@@ -34,60 +35,51 @@ void set_motrol_pin(void){
 }
 
 
-/*in1 1 in2 0 电机1正转
- *in1 0 in2 1 电机1反转
- *in1 0 in2 0 电机1停止
- * */
-int motrol_1_con(int dir,int speed,void* device){
-    //处理方向
-    switch(dir){
+int motrol_con(int pos,float dir,float speed,void* device){
 
-          case(MOTROL_FORHEAD): //设置前进引脚
-                   rt_pin_write( IN1_PIN,  PIN_LOW);
-                   rt_pin_write( IN2_PIN,  PIN_HIGH);
-                   break;
-          case(MOTROL_BACKWORD)://设置后退引脚
-                   rt_pin_write( IN1_PIN,  PIN_HIGH);
-                   rt_pin_write( IN2_PIN,  PIN_LOW);
-                   break;
-          case(MOTROL_STOP):    //设置停止引脚
-                   rt_pin_write( IN1_PIN,  PIN_LOW);
-                   rt_pin_write( IN2_PIN,  PIN_LOW);
-                   break;
-       };
-    //处理速度pwm1 pa8
-    int period=20000000;
-    int goal;
-    goal=period*speed/100;
-    rt_pwm_set(device,1,period, goal);
-    //rt_kprintf("speed1 %d\n",speed);
-
-       return 0;
-};
-
-int motrol_2_con(int dir,int speed,void* device){
-    //处理方向
-    switch(dir){
-
-       case(MOTROL_FORHEAD): //设置前进引脚
-                rt_pin_write( IN3_PIN,  PIN_LOW);
-                rt_pin_write( IN4_PIN,  PIN_HIGH);
-                break;
-       case(MOTROL_BACKWORD)://设置后退引脚
-                rt_pin_write( IN3_PIN,  PIN_HIGH);
-                rt_pin_write( IN4_PIN,  PIN_LOW);
-                break;
-       case(MOTROL_STOP):    //设置停止引脚
+    switch (pos) {
+        case 1://电机1
+            if(dir>0){//设置前进引脚
+                 rt_pin_write( IN1_PIN,  PIN_LOW);
+                 rt_pin_write( IN2_PIN,  PIN_HIGH);
+             }
+            if(dir<0){ //设置后退引脚
+                 rt_pin_write( IN1_PIN,  PIN_HIGH);
+                 rt_pin_write( IN2_PIN,  PIN_LOW);
+            }
+            if(dir==0){//设置停止引脚
+                rt_pin_write( IN1_PIN,  PIN_LOW);
+                rt_pin_write( IN2_PIN,  PIN_LOW);
+             }
+            break;
+        case 2:
+            //电机2
+            if(dir>0){//设置前进引脚
+                 rt_pin_write( IN3_PIN,  PIN_LOW);
+                 rt_pin_write( IN4_PIN,  PIN_HIGH);
+             }
+            if(dir<0){//设置后退引脚
+                 rt_pin_write( IN3_PIN,  PIN_HIGH);
+                 rt_pin_write( IN4_PIN,  PIN_LOW);
+            }
+            if(dir==0){//设置停止引脚
                 rt_pin_write( IN3_PIN,  PIN_LOW);
                 rt_pin_write( IN4_PIN,  PIN_LOW);
-                break;
-    };
-    //处理速度  pwm2 pc6
-    int period=20000000;
-    int goal;
-    goal=period*speed/100;
-    rt_pwm_set(device,1,period, goal);
-    //rt_kprintf("speed2 %d\n",speed);
-    return 0;
+             }
+            break;
+        default:
+            break;
+    }
+    //处理pwm占空比
+     int period=20000000;
+     int goal;
+     if(speed<0)
+         speed=-speed;
+     if(speed>1)
+         speed=1;
+     rt_err_t ret=rt_pwm_set((struct rt_device_pwm *)device,1,period, speed*20000000);
+     if(ret<0)
+         rt_kprintf("set_pwm err!!\n");
+     return ret;
 };
 

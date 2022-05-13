@@ -118,7 +118,7 @@ RT_WEAK void rt_hw_board_init()
 
                        /* USER CODE END TIM2_MspInit 1 */
 
-
+                         // TIM3 encoder
                          __HAL_RCC_TIM3_CLK_ENABLE();
 
                          __HAL_RCC_GPIOA_CLK_ENABLE();
